@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Rastreamento em Tempo Real - ESP32</title>
+    <title>Rastreamento GPS em Tempo Real</title>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
@@ -17,6 +17,7 @@
     <script>
       let map;
       let marker;
+      let infoWindow;
 
       async function getGPSData() {
         try {
@@ -25,37 +26,60 @@
 
           const lat = parseFloat(data.lat);
           const lng = parseFloat(data.lon);
+          const speed = parseFloat(data.speed).toFixed(2);
+          const alt = parseFloat(data.alt).toFixed(2);
+          const hdop = parseFloat(data.hdop).toFixed(2);
+          const sats = data.sats;
+          const utcTime = data.time;
+
           const position = { lat, lng };
 
+          const content = `
+            <div style="font-size: 14px">
+              <strong>Localização Atual</strong><br/>
+              <b>Lat:</b> ${lat}<br/>
+              <b>Lng:</b> ${lng}<br/>
+              <b>Velocidade:</b> ${speed} km/h<br/>
+              <b>Altitude:</b> ${alt} m<br/>
+              <b>HDOP:</b> ${hdop}<br/>
+              <b>Satélites:</b> ${sats}<br/>
+              <b>Horário UTC:</b> ${utcTime}
+            </div>
+          `;
+
           if (!marker) {
-            // Primeira vez: cria o mapa e marcador
             map = new google.maps.Map(document.getElementById("map"), {
               center: position,
               zoom: 16,
+              mapId: "DEMO_MAP_ID"
             });
 
-            marker = new google.maps.Marker({
-              position,
-              map,
-              title: "Posição Atual",
+            marker = new google.maps.marker.AdvancedMarkerElement({
+              map: map,
+              position: position,
+              title: "Posição Atual"
+            });
+
+            infoWindow = new google.maps.InfoWindow({
+              content: content
+            });
+
+            marker.addListener("click", () => {
+              infoWindow.open({ anchor: marker, map });
             });
           } else {
-            // Atualiza a posição do marcador
-            marker.setPosition(position);
+            marker.position = position;
             map.panTo(position);
+            infoWindow.setContent(content);
           }
 
-          console.log("Dados recebidos:", data);
         } catch (error) {
           console.error("Erro ao buscar dados do GPS:", error);
         }
       }
 
       function initMap() {
-        // Chama uma vez no início
         getGPSData();
-
-        // Atualiza a cada 5 segundos
         setInterval(getGPSData, 5000);
       }
     </script>
@@ -63,7 +87,7 @@
     <script
       async
       defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=initMap&loading=async">
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=initMap&libraries=marker&loading=async">
     </script>
   </body>
 </html>
