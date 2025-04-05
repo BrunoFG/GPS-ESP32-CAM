@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title> Localização em tempo real </title>
+    <title>Rastreamento em Tempo Real - ESP32</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       #map {
         height: 100vh;
@@ -13,51 +15,55 @@
     <div id="map"></div>
 
     <script>
-      const planilhaID = '1UpJkC9qR23bMcmdo4sGqaPtDNgmTc5AISo3dikYoWgY'; // Substitua com o ID da sua planilha
-      const aba = 'Dados'; // Nome da aba
+      let map;
+      let marker;
 
-      async function buscarLocalizacao() {
-        const url = `https://docs.google.com/spreadsheets/d/${planilhaID}/gviz/tq?tqx=out:json&sheet=${aba}`;
-        const res = await fetch(url);
-        const texto = await res.text();
-        const json = JSON.parse(texto.substring(47).slice(0, -2)); // Remove os parênteses do retorno
-        const dados = json.table.rows;
+      async function getGPSData() {
+        try {
+          const response = await fetch("https://script.google.com/macros/s/AKfycbzLmYfAHjjgIkw1fGJGqkPqd9ORw1NZ5y0nNB57JOsQSfHQixXxJuYHqnqyK6--UPew/exec");
+          const data = await response.json();
 
-        if (dados.length > 0) {
-          const ultimaLinha = dados[dados.length - 1].c;
-          const lat = parseFloat(ultimaLinha[0].v);
-          const lon = parseFloat(ultimaLinha[1].v);
+          const lat = parseFloat(data.lat);
+          const lng = parseFloat(data.lon);
+          const position = { lat, lng };
 
-          atualizarMapa(lat, lon);
+          if (!marker) {
+            // Primeira vez: cria o mapa e marcador
+            map = new google.maps.Map(document.getElementById("map"), {
+              center: position,
+              zoom: 16,
+            });
+
+            marker = new google.maps.Marker({
+              position,
+              map,
+              title: "Posição Atual",
+            });
+          } else {
+            // Atualiza a posição do marcador
+            marker.setPosition(position);
+            map.panTo(position);
+          }
+
+          console.log("Dados recebidos:", data);
+        } catch (error) {
+          console.error("Erro ao buscar dados do GPS:", error);
         }
       }
 
-      let mapa;
-      let marcador;
-
       function initMap() {
-        mapa = new google.maps.Map(document.getElementById("map"), {
-          zoom: 18,
-          center: { lat: 0, lng: 0 },
-        });
-
-        marcador = new google.maps.Marker({
-          map: mapa,
-        });
+        // Chama uma vez no início
+        getGPSData();
 
         // Atualiza a cada 5 segundos
-        setInterval(buscarLocalizacao, 5000);
-      }
-
-      function atualizarMapa(lat, lon) {
-        const pos = { lat, lng: lon };
-        mapa.setCenter(pos);
-        marcador.setPosition(pos);
+        setInterval(getGPSData, 5000);
       }
     </script>
 
-    <script async defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=initMap">
+    <script
+      async
+      defer
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=initMap&loading=async">
     </script>
   </body>
 </html>
