@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Rastreamento GPS em Tempo Real</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Localização em tempo real</title>
+    <meta charset="utf-8">
     <style>
       #map {
         height: 100vh;
         width: 100%;
       }
     </style>
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=initMap"
+      async
+      defer
+    ></script>
   </head>
   <body>
     <div id="map"></div>
@@ -17,77 +21,67 @@
     <script>
       let map;
       let marker;
-      let infoWindow;
 
-      async function getGPSData() {
+      async function buscarDados() {
         try {
-          const response = await fetch("https://script.google.com/macros/s/AKfycbzLmYfAHjjgIkw1fGJGqkPqd9ORw1NZ5y0nNB57JOsQSfHQixXxJuYHqnqyK6--UPew/exec");
-          const data = await response.json();
+          const response = await fetch(
+            'https://script.google.com/macros/s/AKfycbzLmYfAHjjgIkw1fGJGqkPqd9ORw1NZ5y0nNB57JOsQSfHQixXxJuYHqnqyK6--UPew/exec'
+          );
 
-          const lat = parseFloat(data.lat);
-          const lng = parseFloat(data.lon);
-          const speed = parseFloat(data.speed).toFixed(2);
-          const alt = parseFloat(data.alt).toFixed(2);
-          const hdop = parseFloat(data.hdop).toFixed(2);
-          const sats = data.sats;
-          const utcTime = data.time;
-
-          const position = { lat, lng };
-
-          const content = `
-            <div style="font-size: 14px">
-              <strong>Localização Atual</strong><br/>
-              <b>Lat:</b> ${lat}<br/>
-              <b>Lng:</b> ${lng}<br/>
-              <b>Velocidade:</b> ${speed} km/h<br/>
-              <b>Altitude:</b> ${alt} m<br/>
-              <b>HDOP:</b> ${hdop}<br/>
-              <b>Satélites:</b> ${sats}<br/>
-              <b>Horário UTC:</b> ${utcTime}
-            </div>
-          `;
-
-          if (!marker) {
-            map = new google.maps.Map(document.getElementById("map"), {
-              center: position,
-              zoom: 16,
-              mapId: "DEMO_MAP_ID"
-            });
-
-            marker = new google.maps.marker.AdvancedMarkerElement({
-              map: map,
-              position: position,
-              title: "Posição Atual"
-            });
-
-            infoWindow = new google.maps.InfoWindow({
-              content: content
-            });
-
-            marker.addListener("click", () => {
-              infoWindow.open({ anchor: marker, map });
-            });
-          } else {
-            marker.position = position;
-            map.panTo(position);
-            infoWindow.setContent(content);
-          }
-
+          const dados = await response.json();
+          return {
+            lat: parseFloat(dados.lat),
+            lng: parseFloat(dados.lon),
+            info: `
+              <strong>Velocidade:</strong> ${dados.speed} km/h<br>
+              <strong>Altitude:</strong> ${dados.alt} m<br>
+              <strong>HDOP:</strong> ${dados.hdop}<br>
+              <strong>SATs:</strong> ${dados.sats}<br>
+              <strong>UTC:</strong> ${dados.time}
+            `
+          };
         } catch (error) {
           console.error("Erro ao buscar dados do GPS:", error);
+          return null;
         }
       }
 
-      function initMap() {
-        getGPSData();
-        setInterval(getGPSData, 5000);
-      }
-    </script>
+      async function initMap() {
+        const dados = await buscarDados();
 
-    <script
-      async
-      defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=initMap&libraries=marker&loading=async">
+        if (!dados) {
+          alert("Não foi possível carregar dados do GPS.");
+          return;
+        }
+
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: dados,
+          zoom: 18
+        });
+
+        marker = new google.maps.Marker({
+          position: dados,
+          map: map
+        });
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: dados.info
+        });
+
+        marker.addListener("click", () => {
+          infoWindow.open(map, marker);
+        });
+
+        // Atualiza a posição a cada 5 segundos
+        setInterval(async () => {
+          const novosDados = await buscarDados();
+          if (novosDados) {
+            marker.setPosition(novosDados);
+            map.setCenter(novosDados);
+            infoWindow.setContent(novosDados.info);
+          }
+        }, 5000);
+      }
     </script>
   </body>
 </html>
