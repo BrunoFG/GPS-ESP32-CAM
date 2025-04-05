@@ -1,87 +1,83 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Localização em tempo real</title>
-    <meta charset="utf-8">
-    <style>
-      #map {
-        height: 100vh;
-        width: 100%;
-      }
-    </style>
-    <script
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=initMap"
-      async
-      defer
-    ></script>
-  </head>
-  <body>
-    <div id="map"></div>
+<head>
+  <title>Localização em Tempo Real - GPS</title>
+  <meta charset="utf-8">
+  <style>
+    #map {
+      height: 90vh;
+      width: 100%;
+    }
+    #info {
+      padding: 10px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      background-color: #f8f8f8;
+      border-top: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h2 style="text-align:center;">Rastreamento em Tempo Real (GPS + Google Maps)</h2>
+  <div id="map"></div>
+  <div id="info">Carregando dados do GPS...</div>
 
-    <script>
-      let map;
-      let marker;
+  <script>
+    let map, marker;
 
-      async function buscarDados() {
-        try {
-          const response = await fetch(
-            'https://script.google.com/macros/s/AKfycbzLmYfAHjjgIkw1fGJGqkPqd9ORw1NZ5y0nNB57JOsQSfHQixXxJuYHqnqyK6--UPew/exec'
-          );
+    async function fetchGPSData() {
+      try {
+        const response = await fetch("https://script.google.com/macros/s/AKfycbzLmYfAHjjgIkw1fGJGqkPqd9ORw1NZ5y0nNB57JOsQSfHQixXxJuYHqnqyK6--UPew/exec", {
+          cache: "no-cache"
+        });
+        const data = await response.json();
 
-          const dados = await response.json();
-          return {
-            lat: parseFloat(dados.lat),
-            lng: parseFloat(dados.lon),
-            info: `
-              <strong>Velocidade:</strong> ${dados.speed} km/h<br>
-              <strong>Altitude:</strong> ${dados.alt} m<br>
-              <strong>HDOP:</strong> ${dados.hdop}<br>
-              <strong>SATs:</strong> ${dados.sats}<br>
-              <strong>UTC:</strong> ${dados.time}
-            `
-          };
-        } catch (error) {
-          console.error("Erro ao buscar dados do GPS:", error);
-          return null;
-        }
-      }
-
-      async function initMap() {
-        const dados = await buscarDados();
-
-        if (!dados) {
-          alert("Não foi possível carregar dados do GPS.");
+        if (!data.lat || !data.lon) {
+          document.getElementById("info").innerText = "Erro: dados incompletos";
           return;
         }
 
-        map = new google.maps.Map(document.getElementById("map"), {
-          center: dados,
-          zoom: 18
-        });
+        const position = { lat: data.lat, lng: data.lon };
 
-        marker = new google.maps.Marker({
-          position: dados,
-          map: map
-        });
+        // Atualiza ou cria o mapa e marcador
+        if (!map) {
+          map = new google.maps.Map(document.getElementById("map"), {
+            center: position,
+            zoom: 18,
+          });
+          marker = new google.maps.Marker({
+            position,
+            map,
+            title: "Última Localização"
+          });
+        } else {
+          marker.setPosition(position);
+          map.setCenter(position);
+        }
 
-        const infoWindow = new google.maps.InfoWindow({
-          content: dados.info
-        });
+        // Atualiza info
+        document.getElementById("info").innerHTML = `
+          <strong>Latitude:</strong> ${data.lat}<br>
+          <strong>Longitude:</strong> ${data.lon}<br>
+          <strong>Velocidade:</strong> ${data.speed} km/h<br>
+          <strong>Altitude:</strong> ${data.alt} m<br>
+          <strong>HDOP:</strong> ${data.hdop}<br>
+          <strong>Satélites:</strong> ${data.sats}<br>
+          <strong>Horário UTC:</strong> ${data.time}
+        `;
 
-        marker.addListener("click", () => {
-          infoWindow.open(map, marker);
-        });
-
-        // Atualiza a posição a cada 5 segundos
-        setInterval(async () => {
-          const novosDados = await buscarDados();
-          if (novosDados) {
-            marker.setPosition(novosDados);
-            map.setCenter(novosDados);
-            infoWindow.setContent(novosDados.info);
-          }
-        }, 5000);
+      } catch (error) {
+        document.getElementById("info").innerText = "Erro ao buscar dados do GPS: " + error;
       }
-    </script>
-  </body>
+    }
+
+    // Atualiza a cada 5 segundos
+    setInterval(fetchGPSData, 5000);
+    window.onload = fetchGPSData;
+  </script>
+
+  <script async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=fetchGPSData">
+  </script>
+</body>
 </html>
