@@ -39,7 +39,6 @@
 
         const position = { lat: data.lat, lng: data.lon };
 
-        // Atualiza ou cria o mapa e marcador
         if (!map) {
           map = new google.maps.Map(document.getElementById("map"), {
             center: position,
@@ -55,7 +54,6 @@
           map.setCenter(position);
         }
 
-        // Atualiza info
         document.getElementById("info").innerHTML = `
           <strong>Latitude:</strong> ${data.lat}<br>
           <strong>Longitude:</strong> ${data.lon}<br>
@@ -71,13 +69,15 @@
       }
     }
 
-    // Atualiza a cada 5 segundos
-    setInterval(fetchGPSData, 5000);
-    window.onload = fetchGPSData;
+    // ✅ Agora temos uma função global chamada initMap
+    function initMap() {
+      fetchGPSData();                 // Chamada inicial
+      setInterval(fetchGPSData, 5000); // Atualização periódica
+    }
   </script>
 
   <script async
-    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA1vd8VeMpyb-78vmQuyXKntuIT54EqNVo&callback=fetchGPSData">
+    src="https://maps.googleapis.com/maps/api/js?key=SEU_API_KEY&callback=initMap">
   </script>
 </body>
 </html>
